@@ -1,6 +1,8 @@
 import { Note } from '../types';
+import { DEMO_NOTES } from './demo-notes';
 
 export const DEFAULT_NOTES: Note[] = [
+  ...DEMO_NOTES,
   {
     id: 'note-math-1',
     title: 'Calculus - Damped Harmonic Oscillator',
@@ -53,7 +55,7 @@ Where:
 ### Calculus Inquiries:
 1. What is the instantaneous velocity $v(t) = \\frac{dx}{dt}$ at any point $t_0$?
 2. How does varying the frequency $a$ and damping $b$ affect the rate of energy dissipation?
-3. What is the cumulative energy dissipated, approximated by the Riemann integral $\\int_0^T x^2(t) dt$?
+3. What signed area does the shaded Riemann sum approximate, i.e. $\\int_{0.5}^{4.5} x(t)\\,dt$? (The energy lost to damping is a different integral: $\\int \\gamma\\,\\dot{x}^2\\,dt$.)
 
 *Click **"Visualize Note"** or use the attached simulation below to inspect dynamic tangent tracking and Riemann sums.*`,
     attachedSimulation: {
@@ -79,29 +81,6 @@ Where:
         { id: 'b', label: 'Damping Factor (b)', min: 0.0, max: 1.0, default: 0.25, step: 0.05 },
         { id: 'tangentX', label: 'Evaluation Point (x₀)', min: 0, max: 8, default: 1.8, step: 0.1 }
       ]
-    },
-    attachedTrace: {
-      plan: 'Analyzed second-order linear damped harmonic differential equation. Verified coordinate intervals and confirmed smooth exponential envelope boundaries.',
-      steps: [
-        { phase: 'analysis', title: 'Calculus Boundary Formulation', detail: 'Determined envelope boundaries +/- e^(-bx) and established positive non-zero damping range.', timestamp: Date.now() - 3600000, status: 'success' },
-        { phase: 'validation', title: 'Mathematical Finiteness Verification', detail: 'Evaluated function across 30 sample points; 0 NaN or undefined values encountered.', timestamp: Date.now() - 3550000, status: 'success' },
-        { phase: 'final', title: 'Certified Calculus Model', detail: 'Validated tangent line differential derivative m = dy/dx at x0 = 1.8.', timestamp: Date.now() - 3500000, status: 'success' }
-      ],
-      validationReport: {
-        domain: 'math',
-        isValid: true,
-        errors: [],
-        warnings: [],
-        fixesApplied: ['Adjusted integral upper bound b > a'],
-        checks: [
-          { name: 'Coordinate Bounds', passed: true, message: 'Valid bounds [-0.5, 10]' },
-          { name: 'Function Existence', passed: true, message: '3 function(s) defined (primary curve + envelopes).' },
-          { name: 'Function Finiteness & Continuity', passed: true, message: 'Cleanly evaluated without division-by-zero.' },
-          { name: 'Calculus Interval Check', passed: true, message: 'Integral interval [0.5, 4.5] is well-formed.' }
-        ]
-      },
-      attempts: 1,
-      correctionsMade: ['Adjusted integral upper bound b > a for valid area integration']
     }
   },
   {
@@ -124,59 +103,35 @@ $$V_s(t) = V_R(t) + V_L(t) + V_C(t) = R i(t) + L \\frac{di(t)}{dt} + \\frac{1}{C
 - **Inductor ($L$):** Opposes instantaneous changes in current by generating back-EMF $\\mathcal{E} = -L \\frac{di}{dt}$.
 - **Capacitor ($C$):** Stores electrostatic potential energy in electric field $E = \\frac{1}{2} C V^2$.
 
-### Current Flow & Particles:
-When the power switch is closed, mobile charge carriers (electrons) drift through the conductors. The particle drift velocity is directly proportional to loop current $I$.`,
+### Natural Response for These Values ($R = 50\\,\\Omega$, $L = 50$ mH, $C = 200\\,\\mu$F):
+- Undamped natural frequency: $\\omega_0 = 1/\\sqrt{LC} \\approx 316$ rad/s ($f_0 \\approx 50$ Hz).
+- Damping ratio: $\\zeta = \\frac{R}{2}\\sqrt{C/L} \\approx 1.58$, so this circuit is **overdamped** and does not ring.
+- Critical resistance: $R_c = 2\\sqrt{L/C} \\approx 31.6\\,\\Omega$. Below it, the switch-on transient oscillates.
+
+### DC Steady State:
+When the switch closes, current rises and then decays to zero as the capacitor charges to $V_s$. A capacitor blocks steady DC, so the final current is $0$ and $V_C = V_s$.
+
+*The visualizer shows this loop as a schematic. Live measurements are only computed for DC loops of resistors and switches, so current and power read "Unavailable" here.*`,
     attachedSimulation: {
       domain: 'circuit',
-      title: 'RLC Resonant Circuit with Active Current Flow',
-      description: 'A 12V DC source connected via a toggleable switch to an RLC circuit. Observe current particle drift and capacitive voltage charging.',
+      title: 'Series RLC Loop',
+      description: 'A 12 V DC source, switch, 50 Ω resistor, 50 mH inductor, and 200 µF capacitor in one series loop.',
       simulationType: 'transient',
-      frequency: 60,
       components: [
         { id: 'v1', type: 'dc_source', value: 12, unit: 'V', label: '12V DC', pos: { x: 100, y: 190 }, rotation: 0 },
         { id: 'sw1', type: 'switch', value: 1, unit: '', label: 'Power Switch', pos: { x: 190, y: 90 }, rotation: 0, state: true },
         { id: 'r1', type: 'resistor', value: 50, unit: 'Ω', label: '50 Ω', pos: { x: 300, y: 90 }, rotation: 0 },
         { id: 'l1', type: 'inductor', value: 0.05, unit: 'H', label: '50 mH', pos: { x: 420, y: 90 }, rotation: 0 },
-        { id: 'c1', type: 'capacitor', value: 0.0002, unit: 'F', label: '200 µF', pos: { x: 470, y: 190 }, rotation: 90 },
-        { id: 'lamp', type: 'lamp', value: 10, unit: 'W', label: 'Load Bulb', pos: { x: 300, y: 190 }, rotation: 90 },
-        { id: 'gnd', type: 'ground', value: 0, unit: '', label: 'GND', pos: { x: 100, y: 290 }, rotation: 0 }
+        { id: 'c1', type: 'capacitor', value: 0.0002, unit: 'F', label: '200 µF', pos: { x: 470, y: 190 }, rotation: 90 }
       ],
       wires: [
         { id: 'w1', from: { compId: 'v1', pin: 0 }, to: { compId: 'sw1', pin: 0 } },
         { id: 'w2', from: { compId: 'sw1', pin: 1 }, to: { compId: 'r1', pin: 0 } },
         { id: 'w3', from: { compId: 'r1', pin: 1 }, to: { compId: 'l1', pin: 0 } },
         { id: 'w4', from: { compId: 'l1', pin: 1 }, to: { compId: 'c1', pin: 0 } },
-        { id: 'w5', from: { compId: 'c1', pin: 1 }, to: { compId: 'v1', pin: 1 } },
-        { id: 'w6', from: { compId: 'r1', pin: 1 }, to: { compId: 'lamp', pin: 0 } },
-        { id: 'w7', from: { compId: 'lamp', pin: 1 }, to: { compId: 'c1', pin: 1 } }
+        { id: 'w5', from: { compId: 'c1', pin: 1 }, to: { compId: 'v1', pin: 1 } }
       ],
-      params: [
-        { id: 'r1', label: 'Resistance (R)', min: 10, max: 200, default: 50, step: 5, unit: 'Ω' },
-        { id: 'v1', label: 'Supply Voltage (V)', min: 1, max: 30, default: 12, step: 1, unit: 'V' }
-      ]
-    },
-    attachedTrace: {
-      plan: 'Constructed circuit schematic with closed conductive loop, power source, load bulb, and ground node.',
-      steps: [
-        { phase: 'analysis', title: 'Kirchhoff Topology Plan', detail: 'Verified continuous closed circuit loop connecting V_source through R, L, C, and GND.', timestamp: Date.now() - 7200000, status: 'success' },
-        { phase: 'validation', title: 'KCL & Short-Circuit Linter', detail: 'Verified 7 wire branches and checked that internal resistance R=50 prevents dead short.', timestamp: Date.now() - 7150000, status: 'success' },
-        { phase: 'final', title: 'Circuit Flow Certification', detail: 'Drift velocity mapped to loop current I = V / R with switch state control.', timestamp: Date.now() - 7100000, status: 'success' }
-      ],
-      validationReport: {
-        domain: 'circuit',
-        isValid: true,
-        errors: [],
-        warnings: [],
-        fixesApplied: [],
-        checks: [
-          { name: 'Power Source Check', passed: true, message: '12V DC power source present.' },
-          { name: 'Ground Reference Check', passed: true, message: 'Circuit grounded (0V reference).' },
-          { name: 'Wire Connectivity & Topology', passed: true, message: '7 valid wire branches verified.' },
-          { name: 'Impedance & Short-Circuit Check', passed: true, message: 'Current finite and bounded by 50Ω load.' }
-        ]
-      },
-      attempts: 1,
-      correctionsMade: []
+      params: []
     }
   },
   {
@@ -203,7 +158,7 @@ $$\\mathbf{F}_d = -\\gamma \\mathbf{v}$$
 $$m_1 \\ddot{y}_1 = -k_1 (y_1 - L_1) + k_2 (y_2 - y_1 - L_2) - \\gamma_1 \\dot{y}_1 + m_1 g$$
 $$m_2 \\ddot{y}_2 = -k_2 (y_2 - y_1 - L_2) - \\gamma_2 \\dot{y}_2 + m_2 g$$
 
-*In the visualizer, you can grab either mass with your cursor to pull and release, observing real-time velocity and force vectors!*`,
+*The stiffness slider sets $k_1 = k_2$ together, and the damping slider sets the drag on both masses. In the visualizer, you can grab either mass with your cursor to pull and release, observing real-time velocity and force vectors!*`,
     attachedSimulation: {
       domain: 'physics',
       title: 'Coupled Spring-Mass Harmonic Oscillator',
@@ -224,28 +179,6 @@ $$m_2 \\ddot{y}_2 = -k_2 (y_2 - y_1 - L_2) - \\gamma_2 \\dot{y}_2 + m_2 g$$
         { id: 'stiffness', label: 'Spring Stiffness (k)', min: 10, max: 100, default: 45, step: 5, unit: 'N/m' },
         { id: 'damping', label: 'Fluid Damping (γ)', min: 0, max: 0.5, default: 0.08, step: 0.01 }
       ]
-    },
-    attachedTrace: {
-      plan: 'Configured coupled 2-body Hooke springs suspended from static ceiling anchor. Verified numerical integration stability.',
-      steps: [
-        { phase: 'analysis', title: 'Verlet Stability Analysis', detail: 'Checked natural frequencies omega = sqrt(k/m) to prevent numerical blowup with dt=0.016s.', timestamp: Date.now() - 10000000, status: 'success' },
-        { phase: 'validation', title: 'Kinematic Constraint Linter', detail: 'Validated body anchoring to ceiling mount (isStatic=true) and verified viewport bounds.', timestamp: Date.now() - 9950000, status: 'success' },
-        { phase: 'final', title: 'Physics Rig Certification', detail: 'Energy conservation verified across 1,000 oscillatory cycles.', timestamp: Date.now() - 9900000, status: 'success' }
-      ],
-      validationReport: {
-        domain: 'physics',
-        isValid: true,
-        errors: [],
-        warnings: [],
-        fixesApplied: [],
-        checks: [
-          { name: 'Verlet Numerical Stability', passed: true, message: 'k/m ratio satisfies stability limit sqrt(k/m)*dt < 0.8.' },
-          { name: 'Constraint Graph Validity', passed: true, message: '2 kinematic constraints connected to valid bodies.' },
-          { name: 'System Anchor Check', passed: true, message: 'Fixed ceiling mount created for stability.' }
-        ]
-      },
-      attempts: 1,
-      correctionsMade: []
     }
   },
   {
@@ -269,7 +202,8 @@ Second-order kinetics: rate depends on both the concentration of the nucleophile
 ### Stereochemistry:
 - **Walden Inversion:** The nucleophile must attack from the backside of the carbon-leaving group bond ($180^\\circ$ angle).
 - This causes the three peripheral hydrogen atoms to flip inward like an umbrella in high wind!
-- Electron pushing curved arrows show the 2-electron pair moving from the nucleophilic lone pair to the carbon center.`,
+- Electron pushing curved arrows show the 2-electron pair moving from the nucleophilic lone pair to the carbon center.
+- In $\\text{CH}_3\\text{Br}$ the carbon is not a stereocenter, so the inversion is geometric only. With a chiral substrate it is observable: $(R)$-2-bromobutane gives $(S)$-butan-2-ol.`,
     attachedSimulation: {
       domain: 'chemistry',
       title: 'SN2 Nucleophilic Substitution Mechanism',
@@ -293,9 +227,9 @@ Second-order kinetics: rate depends on both the concentration of the nucleophile
             { id: 'H_nu', element: 'H', pos: { x: 90, y: 150 } },
             { id: 'C', element: 'C', pos: { x: 260, y: 180 } },
             { id: 'Br', element: 'Br', pos: { x: 400, y: 180 }, charge: 0 },
-            { id: 'H1', element: 'H', pos: { x: 260, y: 110 } },
-            { id: 'H2', element: 'H', pos: { x: 230, y: 245 } },
-            { id: 'H3', element: 'H', pos: { x: 285, y: 245 } }
+            { id: 'H1', element: 'H', pos: { x: 230, y: 115 } },
+            { id: 'H2', element: 'H', pos: { x: 215, y: 235 } },
+            { id: 'H3', element: 'H', pos: { x: 248, y: 252 } }
           ],
           bonds: [
             { id: 'b_nu', from: 'Nu', to: 'H_nu', order: 1 },
@@ -311,15 +245,15 @@ Second-order kinetics: rate depends on both the concentration of the nucleophile
         },
         {
           stepNumber: 2,
-          description: 'Step 2: Transition state resolves with inversion of stereochemistry, forming methanol and releasing bromide.',
+          description: 'Step 2: The trigonal-bipyramidal transition state collapses; the three C–H bonds flip to the opposite side (umbrella inversion), forming methanol and releasing bromide.',
           atoms: [
             { id: 'Nu', element: 'O', pos: { x: 200, y: 180 }, charge: 0 },
             { id: 'H_nu', element: 'H', pos: { x: 170, y: 140 } },
             { id: 'C', element: 'C', pos: { x: 280, y: 180 } },
             { id: 'Br', element: 'Br', pos: { x: 440, y: 180 }, charge: -1, lonePairs: 4 },
-            { id: 'H1', element: 'H', pos: { x: 280, y: 110 } },
-            { id: 'H2', element: 'H', pos: { x: 305, y: 245 } },
-            { id: 'H3', element: 'H', pos: { x: 255, y: 245 } }
+            { id: 'H1', element: 'H', pos: { x: 310, y: 115 } },
+            { id: 'H2', element: 'H', pos: { x: 325, y: 235 } },
+            { id: 'H3', element: 'H', pos: { x: 292, y: 252 } }
           ],
           bonds: [
             { id: 'b_nu', from: 'Nu', to: 'H_nu', order: 1 },
@@ -332,29 +266,8 @@ Second-order kinetics: rate depends on both the concentration of the nucleophile
         }
       ],
       params: [
-        { id: 'temp', label: 'Activation Energy (kJ/mol)', min: 50, max: 150, default: 85, step: 5, unit: 'kJ' }
+        { id: 'temp', label: 'Activation Energy (kJ/mol)', min: 50, max: 150, default: 85, step: 5, unit: 'kJ/mol' }
       ]
-    },
-    attachedTrace: {
-      plan: 'Validated SN2 electron pushing arrows and Walden inversion umbrella coordinates.',
-      steps: [
-        { phase: 'analysis', title: 'Reaction Mechanism Formulation', detail: 'Backside attack geometry at 180 degrees to C-Br bond.', timestamp: Date.now() - 15000000, status: 'success' },
-        { phase: 'validation', title: 'Curved Arrow Linter', detail: 'Verified 2-electron pair donor (O lone pair) and acceptor (C-Br sigma star).', timestamp: Date.now() - 14950000, status: 'success' },
-        { phase: 'final', title: 'Stereochemical Certification', detail: 'Inverted tetrahedral carbon confirmed.', timestamp: Date.now() - 14900000, status: 'success' }
-      ],
-      validationReport: {
-        domain: 'chemistry',
-        isValid: true,
-        errors: [],
-        warnings: [],
-        fixesApplied: [],
-        checks: [
-          { name: 'Mechanism Step Check', passed: true, message: '2 reaction step(s) verified.' },
-          { name: 'Curved Arrow Electron Pushing', passed: true, message: 'All arrow endpoints point to verified donor/acceptor atoms and bonds.' }
-        ]
-      },
-      attempts: 1,
-      correctionsMade: []
     }
   },
   {
@@ -366,7 +279,7 @@ Second-order kinetics: rate depends on both the concentration of the nucleophile
     updatedAt: Date.now() - 1000 * 60 * 30,
     content: `# Quicksort: Divide & Conquer Partitioning
 
-Quicksort is an efficient $O(n \\log n)$ average-case comparison-based sorting algorithm discovered by Tony Hoare.
+Quicksort is an efficient $O(n \\log n)$ average-case comparison-based sorting algorithm developed by Tony Hoare in 1959.
 
 ### Recurrence Relation:
 For balanced partitions:
@@ -572,7 +485,7 @@ $$\\nabla f = \\left( \\frac{\\partial f}{\\partial x}, \\frac{\\partial f}{\\pa
 \`\`\`
 
 ### Geometric Properties:
-- **Critical Points**: Local extrema occur wherever $a r = \\frac{\\pi}{2} + k\\pi$.
+- **Critical Points**: Rings of local extrema occur wherever $a r = \\frac{\\pi}{2} + k\\pi$. At the origin the surface has a cone point: $f$ is continuous but not differentiable there.
 - **Level Curves**: The projected circles on the floor plane correspond to concentric circular contours $f(x, y) = c$.
 - **Camera Interaction**: Drag with your mouse to rotate the 3D surface in pitch/yaw, and scroll to zoom in/out!`,
     attachedSimulation: {
@@ -620,7 +533,7 @@ Where $HR$ is heart rate (bpm) and $SV$ is stroke volume (~70 mL per beat).
 {
   "domain": "diagram",
   "title": "Anatomy of the Human Heart & Systemic Circulation",
-  "description": "Vector schematic of the four chambers, major cardiac vessels, and atrioventricular valves with interactive callout pins and a 5-step guided circulation tour.",
+  "description": "Simplified schematic of the ventricles, septum, and major cardiac vessels with interactive callout pins and a 5-step guided circulation tour.",
   "topicCategory": "anatomy",
   "viewBox": { "width": 640, "height": 420 },
   "shapes": [
@@ -694,7 +607,7 @@ Where $HR$ is heart rate (bpm) and $SV$ is stroke volume (~70 mL per beat).
     { "hotspotId": "superior_vena_cava", "stepTitle": "Step 1: Venous Inflow", "stepExplanation": "Deoxygenated blood from the body enters the heart through the Superior and Inferior Vena Cava." },
     { "hotspotId": "right_atrium", "stepTitle": "Step 2: Atrial Filling", "stepExplanation": "Blood pools in the Right Atrium before passing through the tricuspid valve." },
     { "hotspotId": "right_ventricle", "stepTitle": "Step 3: Pulmonary Ejection", "stepExplanation": "Right Ventricle contracts, sending blood to the lungs for gas exchange (CO₂ out, O₂ in)." },
-    { "hotspotId": "left_ventricle", "stepTitle": "Step 4: High-Pressure Pumping", "stepExplanation": "Oxygenated blood returns to the Left Ventricle, which has thick muscle walls." },
+    { "hotspotId": "left_ventricle", "stepTitle": "Step 4: High-Pressure Pumping", "stepExplanation": "Oxygenated blood returns from the lungs through the pulmonary veins into the left atrium, then through the mitral valve into the thick-walled Left Ventricle." },
     { "hotspotId": "aorta", "stepTitle": "Step 5: Systemic Distribution", "stepExplanation": "The Left Ventricle contracts forcefully, propelling oxygenated blood through the Aorta to the entire body." }
   ],
   "params": []
@@ -708,7 +621,7 @@ Where $HR$ is heart rate (bpm) and $SV$ is stroke volume (~70 mL per beat).
     attachedSimulation: {
       domain: 'diagram',
       title: 'Anatomy of the Human Heart & Systemic Circulation',
-      description: 'Vector schematic of the four chambers, major cardiac vessels, and atrioventricular valves with interactive callout pins and a 5-step guided circulation tour.',
+      description: 'Simplified schematic of the ventricles, septum, and major cardiac vessels with interactive callout pins and a 5-step guided circulation tour.',
       topicCategory: 'anatomy',
       viewBox: { width: 640, height: 420 },
       shapes: [
@@ -782,7 +695,7 @@ Where $HR$ is heart rate (bpm) and $SV$ is stroke volume (~70 mL per beat).
         { hotspotId: 'superior_vena_cava', stepTitle: 'Step 1: Venous Inflow', stepExplanation: 'Deoxygenated blood from the body enters the heart through the Superior and Inferior Vena Cava.' },
         { hotspotId: 'right_atrium', stepTitle: 'Step 2: Atrial Filling', stepExplanation: 'Blood pools in the Right Atrium before passing through the tricuspid valve.' },
         { hotspotId: 'right_ventricle', stepTitle: 'Step 3: Pulmonary Ejection', stepExplanation: 'Right Ventricle contracts, sending blood to the lungs for gas exchange (CO₂ out, O₂ in).' },
-        { hotspotId: 'left_ventricle', stepTitle: 'Step 4: High-Pressure Pumping', stepExplanation: 'Oxygenated blood returns to the Left Ventricle, which has thick muscle walls.' },
+        { hotspotId: 'left_ventricle', stepTitle: 'Step 4: High-Pressure Pumping', stepExplanation: 'Oxygenated blood returns from the lungs through the pulmonary veins into the left atrium, then through the mitral valve into the thick-walled Left Ventricle.' },
         { hotspotId: 'aorta', stepTitle: 'Step 5: Systemic Distribution', stepExplanation: 'The Left Ventricle contracts forcefully, propelling oxygenated blood through the Aorta to the entire body.' }
       ],
       params: []

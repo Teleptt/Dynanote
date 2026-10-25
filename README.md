@@ -16,6 +16,7 @@ The development server uses http://127.0.0.1:3000 by default. `npm run preview` 
 ## Features
 
 - Live Preview and Markdown source editing, with inline math and embedded visualizations.
+- A five-note **Hackathon Demo** folder (run of show, projectile motion, a live-measured Ohm's law loop, binary search, Kepler's laws). It appears first in a fresh vault; **Add demo notes** adds it to an existing one. Every number quoted in the demo text is recomputed by `npm test`.
 - Nine declarative visualization domains: math, circuits, physics, chemistry, algorithms, logic, orbits, 3D, and annotated diagrams.
 - Optional AI providers for generation and sketch interpretation. The offline library selects examples by keyword; it does not understand images or synthesize custom models.
 - Export/import JSON vault backups. Imports add notes with new IDs and preserve existing notes.
@@ -30,13 +31,13 @@ Equations use an arithmetic-only parser with numeric parameters and approved mat
 
 API keys remain in memory for the session, are omitted from saved settings, and must be re-entered after reload. Previously persisted credentials are removed from browser settings storage during migration. Requests go directly from the browser to the configured provider; that provider must support browser requests/CORS. No provider credentials are included in vault exports.
 
-Automated checks validate structure and selected numerical/topological properties. They are not scientific certification. Invalid results are rejected after the retry limit. Circuit measurements support exactly one DC source in a closed series loop with positive resistors and switches; other circuits are displayed as schematics with measurements unavailable. Complex physics, chemistry, and orbit models remain educational approximations.
+Automated checks validate structure and selected numerical/topological properties. They are not scientific certification. Invalid results are rejected after the retry limit. Logic truth tables are computed from the gate wiring; a supplied table that disagrees is flagged by the reviewer. Circuit measurements support exactly one DC source in a closed series loop with positive resistors and switches; other circuits are displayed as schematics with measurements unavailable. Complex physics, chemistry, and orbit models remain educational approximations.
 
 Notes are stored in browser localStorage, not synchronized between devices. Export backups regularly. Saves are debounced and flushed when the page is hidden or closed. Imported and stored notes are fully validated, including timestamps and attached simulations. Save failures leave current edits in memory and display a warning. If a stored vault is malformed, automatic saving is paused until a valid backup is imported. Undo deletion is session-only and covers the most recent deletion.
 
 ## Regression coverage
 
-`npm test` exercises expression safety, domain preservation, malformed specifications, validation failure reporting, series-circuit topology, empty-vault loading, and updates to notes during generation. Live external provider integration requires separate credentials and is not covered by the offline tests.
+`npm test` recomputes the figures quoted in the example and demo notes, replays the quicksort and binary-search traces, checks logic truth tables against their wiring, and exercises expression safety, domain preservation, malformed specifications, validation failure reporting, series-circuit topology, empty-vault loading, and updates to notes during generation. Live external provider integration requires separate credentials and is not covered by the offline tests.
 
 ## AI workflow
 

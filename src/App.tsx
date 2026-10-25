@@ -6,6 +6,7 @@ import { noteToMarkdown, markdownToNote, markdownFileName } from './lib/markdown
 import React, { useState, useEffect, useRef } from 'react';
 import { Note, SimulationSpec, GenerationStatusEvent, AgenticTrace } from './types';
 import { DEFAULT_NOTES } from './data/default-notes';
+import { DEMO_NOTES } from './data/demo-notes';
 import { insertSimulationBlockAfter } from './lib/markdown-blocks';
 import { aiService } from './services/ai/ai-service';
 import { Sidebar } from './components/layout/Sidebar';
@@ -115,6 +116,12 @@ export const App: React.FC = () => {
   };
   const errorText = (error: unknown) => error instanceof Error ? error.message : String(error);
   const exportVault = () => download(JSON.stringify(notes, null, 2), 'application/json', `dynanote-backup-${new Date().toISOString().slice(0, 10)}.json`);
+  const addDemoNotes = () => {
+    const missing = DEMO_NOTES.filter(d => !notes.some(n => n.id === d.id));
+    if (missing.length) setNotes(prev => [...missing, ...prev]);
+    handleSelectNote(DEMO_NOTES[0].id);
+    setToastMessage({ text: missing.length ? `Added ${missing.length} demo notes.` : 'Demo notes are already in your vault.', type: 'info' });
+  };
   const exportMarkdown = () => { if (activeNote) download(noteToMarkdown(activeNote), 'text/markdown', markdownFileName(activeNote)); };
   const importMarkdown = async (files: File[]) => {
     const added: Note[] = []; const failed: string[] = [];
@@ -363,6 +370,7 @@ export const App: React.FC = () => {
           <label className="cursor-pointer text-purple-300">Import backup<input aria-label="Import vault backup" type="file" accept=".json,application/json" className="sr-only" onChange={e => { const f = e.target.files?.[0]; if (f) void importVault(f); e.target.value = ''; }} /></label>
           <button onClick={exportMarkdown} disabled={!activeNote} className="text-purple-300 disabled:text-zinc-600">Export note (.md)</button>
           <label className="cursor-pointer text-purple-300">Import Markdown<input aria-label="Import Markdown notes" type="file" multiple accept=".md,.markdown,text/markdown" className="sr-only" onChange={e => { const fs = Array.from(e.target.files || []); if (fs.length) void importMarkdown(fs); e.target.value = ''; }} /></label>
+          <button onClick={addDemoNotes} className="text-purple-300">Add demo notes</button>
           {deletedNote && <button className="text-amber-200" onClick={() => { setNotes(prev => [...prev, deletedNote]); setDeletedNote(null); }}>Undo delete</button>}
         </div>
         {/* Document Tab Bar */}

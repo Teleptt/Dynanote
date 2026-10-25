@@ -2,6 +2,7 @@ import { SimulationSpec, DomainValidationReport } from '../../../types';
 import { assertSimulation } from '../../../lib/simulation-schema';
 import { compileExpression } from '../../../lib/expression';
 import { solveSeriesCircuit } from '../../../lib/circuit';
+import { truthTableMismatches } from '../../../lib/logic';
 
 /** Read-only tool feedback. Never replace the user's scientific model with defaults. */
 export function reviewSimulation(spec: SimulationSpec): DomainValidationReport {
@@ -78,7 +79,9 @@ export function reviewSimulation(spec: SimulationSpec): DomainValidationReport {
       const sources = new Set([...spec.inputs, ...spec.gates].map(g => g.id));
       const targets = new Set([...spec.gates, ...spec.outputs].map(g => g.id));
       references(sources, spec.wires.map(w => w.fromId), 'Logic sources');
-      references(targets, spec.wires.map(w => w.toId), 'Logic targets'); break;
+      references(targets, spec.wires.map(w => w.toId), 'Logic targets');
+      const mismatches = truthTableMismatches(spec);
+      check('Truth table', mismatches.length === 0, mismatches.length ? `Truth table contradicts the wiring: ${mismatches.slice(0, 3).join('; ')}` : 'Truth table (if any) agrees with the wiring; the renderer derives it from the gates.'); break;
     }
     case 'diagram':
       check('Diagram content', spec.shapes.length > 0 || spec.hotspots.length > 0, 'Provide shapes or hotspots that explain the requested subject.');

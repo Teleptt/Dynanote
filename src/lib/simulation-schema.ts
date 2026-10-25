@@ -28,7 +28,7 @@ export function assertSimulation(value: unknown): asserts value is SimulationSpe
   if (s.domain === 'circuit') {
     const componentIds = new Set(s.components.map((c: any) => c.id));
     if (componentIds.size !== s.components.length) fail('duplicate component IDs');
-    s.components.forEach((c: any) => { position(c.pos); number(c.value, 'component value'); });
+    s.components.forEach((c: any) => { position(c.pos); number(c.value, 'component value'); if (c.state !== undefined && typeof c.state !== 'boolean') fail('switch state must be true (closed) or false (open)'); });
     s.wires.forEach((w: any) => [w.from,w.to].forEach(p => { if (!p || !componentIds.has(p.compId) || ![0,1].includes(p.pin)) fail('invalid wire endpoint'); }));
   }
   if (s.domain === 'physics') { position(s.gravity); s.bodies.forEach((b: any) => { position(b.pos); number(b.mass,'mass'); if (!b.dimensions) fail('missing body dimensions'); }); }

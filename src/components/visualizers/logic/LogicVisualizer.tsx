@@ -3,6 +3,7 @@ import { useTheme } from '../../../theme/useTheme';
 import React, { useState, useMemo } from 'react';
 import { LogicGateSpec, LogicGateType } from '../../../types';
 import { Cpu, Table2 } from 'lucide-react';
+import { evaluateLogic, deriveTruthTable, truthTableMismatches } from '../../../lib/logic';
 
 interface LogicVisualizerProps {
   spec: LogicGateSpec;
@@ -31,69 +32,10 @@ export const LogicVisualizer: React.FC<LogicVisualizerProps> = ({ spec }) => {
   };
 
   // Evaluate logic propagation
-  const { nodeValues, wireStates } = useMemo(() => {
-    const values: Record<string, 0 | 1> = { ...inputStates };
-    const wires: Record<string, 0 | 1> = {};
-
-    // Evaluate gates (multiple passes for multi-stage cascades)
-    const gates = spec.gates || [];
-    for (let pass = 0; pass < gates.length + 1; pass++) {
-      for (const gate of gates) {
-        // Collect inputs to this gate
-        const inWires = (spec.wires || []).filter((w) => w.toId === gate.id);
-        const inVals = inWires.map((w) => values[w.fromId] ?? 0);
-
-        let outVal: 0 | 1 = 0;
-        const a = inVals[0] ?? 0;
-        const b = inVals[1] ?? 0;
-
-        switch (gate.type) {
-          case 'AND':
-            outVal = a === 1 && b === 1 ? 1 : 0;
-            break;
-          case 'OR':
-            outVal = a === 1 || b === 1 ? 1 : 0;
-            break;
-          case 'NOT':
-            outVal = a === 1 ? 0 : 1;
-            break;
-          case 'XOR':
-            outVal = a !== b ? 1 : 0;
-            break;
-          case 'NAND':
-            outVal = !(a === 1 && b === 1) ? 1 : 0;
-            break;
-          case 'NOR':
-            outVal = !(a === 1 || b === 1) ? 1 : 0;
-            break;
-          case 'XNOR':
-            outVal = a === b ? 1 : 0;
-            break;
-          case 'BUFFER':
-          default:
-            outVal = a;
-            break;
-        }
-
-        values[gate.id] = outVal;
-      }
-    }
-
-    // Set wire states
-    (spec.wires || []).forEach((w) => {
-      wires[w.id] = values[w.fromId] ?? 0;
-    });
-
-    // Evaluate outputs
-    (spec.outputs || []).forEach((out) => {
-      const srcId = out.fromGateId || out.fromInputId;
-      if (srcId && values[srcId] !== undefined) {
-        values[out.id] = values[srcId];
-      }
-    });
-
-    return { nodeValues: values, wireStates: wires };
-  }, [inputStates, spec]);
+  const { nodeValues, wireStates } = useMemo(() => evaluateLogic(spec, inputStates), [inputStates, spec]);
+  // The table is computed from the wiring; a supplied table is only checked against it.
+  const truthTable = useMemo(() => deriveTruthTable(spec), [spec]);
+  const tableMismatches = useMemo(() => truthTableMismatches(spec), [spec]);
 
   // Render SVG gate shapes
   const renderGateShape = (type: LogicGateType, x: number, y: number) => {
@@ -329,26 +271,27 @@ export const LogicVisualizer: React.FC<LogicVisualizerProps> = ({ spec }) => {
       </div>
 
       {/* Interactive Truth Table Drawer */}
-      {showTruthTable && spec.truthTable && spec.truthTable.length > 0 && (
+      {showTruthTable && truthTable && (
         <div className="mt-2 pt-2 border-t border-zinc-800 text-[11px] font-mono overflow-x-auto">
+          {tableMismatches.length > 0 && (
+            <p role="alert" className="mb-1 font-sans text-amber-300">The supplied truth table disagrees with the circuit in {tableMismatches.length} place(s); showing values computed from the wiring.</p>
+          )}
           <table className="w-full text-center border-collapse">
             <thead>
               <tr className="border-b border-zinc-800 text-zinc-400">
-                {Object.keys(spec.truthTable[0].inputs).map((k) => (
-                  <th key={k} className="py-1 px-2">{k}</th>
+                {spec.inputs.map((inp) => (
+                  <th key={inp.id} className="py-1 px-2">{inp.label}</th>
                 ))}
                 <th className="py-1 px-1 text-zinc-600">|</th>
-                {Object.keys(spec.truthTable[0].outputs).map((k) => (
-                  <th key={k} className="py-1 px-2 text-purple-300 font-bold">{k}</th>
+                {spec.outputs.map((out) => (
+                  <th key={out.id} className="py-1 px-2 text-purple-300 font-bold">{out.label}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {spec.truthTable.map((row, rIdx) => {
-                // Check if current row matches current input switch combination
-                const isCurrentActive = Object.entries(row.inputs).every(
-                  ([k, v]) => inputStates[k] === v
-                );
+              {truthTable.map((row, rIdx) => {
+                // Highlight the row matching the current input switches
+                const isCurrentActive = spec.inputs.every((inp, i) => (inputStates[inp.id] ?? 0) === row.inputs[i]);
 
                 return (
                   <tr
@@ -359,11 +302,11 @@ export const LogicVisualizer: React.FC<LogicVisualizerProps> = ({ spec }) => {
                         : 'text-zinc-400 hover:bg-zinc-900/60'
                     }`}
                   >
-                    {Object.values(row.inputs).map((v, iIdx) => (
+                    {row.inputs.map((v, iIdx) => (
                       <td key={iIdx} className="py-0.5 px-2">{v}</td>
                     ))}
                     <td className="py-0.5 px-1 text-zinc-700">|</td>
-                    {Object.values(row.outputs).map((v, oIdx) => (
+                    {row.outputs.map((v, oIdx) => (
                       <td key={oIdx} className={`py-0.5 px-2 ${v === 1 ? 'text-emerald-400' : 'text-zinc-500'}`}>
                         {v}
                       </td>

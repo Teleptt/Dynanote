@@ -16,7 +16,7 @@ export const OrbitVisualizer: React.FC<OrbitVisualizerProps> = ({ spec }) => {
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const [timeScale, setTimeScale] = useState<number>(1.0);
   const [showVectors, setShowVectors] = useState<boolean>(true);
-  const [showKeplerArea, setShowKeplerArea] = useState<boolean>(false);
+  const [showKeplerArea, setShowKeplerArea] = useState<boolean>(spec.keplerSweep?.enabled ?? false);
 
   const stateRef = useRef<{
     time: number;
@@ -71,9 +71,16 @@ export const OrbitVisualizer: React.FC<OrbitVisualizerProps> = ({ spec }) => {
 
       // Orbiting bodies propagation
       const bodies = spec.bodies || [];
+      const eccOf = (body: { eccentricity: number }) => Math.min(0.9, Math.max(0, body.eccentricity || 0));
+      // Shrink (never enlarge) every orbit by one factor so the widest one fits; shapes and ratios are preserved.
+      const margin = 14;
+      const fit = Math.min(1, ...bodies.map((body) => {
+        const a0 = body.semiMajorAxis || 120, e0 = eccOf(body);
+        return Math.min((centerX - margin) / (a0 * (1 + e0)), (centerY - margin) / (a0 * Math.sqrt(1 - e0 * e0)));
+      }));
       bodies.forEach((body) => {
-        const a = body.semiMajorAxis || 120;
-        const e = Math.min(0.9, Math.max(0, body.eccentricity || 0));
+        const a = (body.semiMajorAxis || 120) * fit;
+        const e = eccOf(body);
         const period = body.orbitalPeriod || 8; // seconds per orbit
 
         // Focus offset from center of ellipse: c = a * e
@@ -95,10 +102,12 @@ export const OrbitVisualizer: React.FC<OrbitVisualizerProps> = ({ spec }) => {
         const M = (2 * Math.PI * (stateRef.current.time / period)) % (Math.PI * 2);
 
         // Solve Kepler's equation for Eccentric anomaly E: M = E - e*sin(E) via Newton-Raphson
-        let E = M;
-        for (let iter = 0; iter < 5; iter++) {
-          E = E - (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E));
-        }
+        const solveKepler = (mean: number) => {
+          let ecc = mean;
+          for (let iter = 0; iter < 8; iter++) ecc -= (ecc - e * Math.sin(ecc) - mean) / (1 - e * Math.cos(ecc));
+          return ecc;
+        };
+        const E = solveKepler(M);
 
         // True position relative to central focus
         const xPos = ellipseCenterX + a * Math.cos(E);
@@ -109,7 +118,8 @@ export const OrbitVisualizer: React.FC<OrbitVisualizerProps> = ({ spec }) => {
           ctx.fillStyle = themedColor('rgba(168, 85, 247, 0.2)');
           ctx.beginPath();
           ctx.moveTo(centerX, centerY);
-          const startE = E - 0.4;
+          // Equal areas in equal times: the sector spans a fixed slice of mean anomaly (time), not of E.
+          const startE = solveKepler(M - 0.4);
           for (let th = startE; th <= E; th += 0.05) {
             ctx.lineTo(ellipseCenterX + a * Math.cos(th), centerY + b * Math.sin(th));
           }

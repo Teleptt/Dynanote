@@ -36,7 +36,7 @@ Available representations:
 1. math: bounds:{xMin,xMax,yMin,yMax}, functions:[{id,expression,color,label?}].
    Expressions use x and parameter IDs. Optional calculus:{showTangent,tangentX,
    showIntegral,integralA,integralB,integralPartitions}; partitions 1–1000.
-2. circuit: components:[{id,type,value,unit,label,pos:{x,y},rotation?,state?}],
+2. circuit: components:[{id,type,value,unit,label,pos:{x,y},rotation?,state?:boolean (switches: true=closed)}],
    wires:[{id,from:{compId,pin},to:{compId,pin},points?:[{x,y}]}], simulationType:dc|ac|transient.
    Types: resistor,capacitor,inductor,dc_source,ac_source,ground,switch,diode,lamp,ammeter,voltmeter.
    Pins are 0 or 1. Quantitative measurements support one DC source, positive resistors, and
