@@ -5,7 +5,7 @@ const ts = require('typescript');
 require.extensions['.ts'] = (mod, filename) => mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText, filename);
 const { evaluateExpression } = require('../src/lib/expression.ts');
 const { parseVault, attachResult } = require('../src/lib/vault.ts');
-const { solveSeriesCircuit } = require('../src/lib/circuit.ts');
+const { solveCircuit: solveSeriesCircuit, solveCircuit } = require('../src/lib/circuit.ts');
 const { assertSimulation } = require('../src/lib/simulation-schema.ts');
 const { extractAndValidateSimulation: parse } = require('../src/services/ai/json-cleaner.ts');
 const { AgenticOrchestrator } = require('../src/services/ai/agent/agentic-orchestrator.ts');
@@ -58,8 +58,8 @@ test('DC series measurements use topology and individual values',async()=>{
   assert.equal(solveSeriesCircuit(spec,{},{}).current,12/50);
   assert.equal(solveSeriesCircuit(spec,{r1:100,v1:20},{}).current,0.2);
   assert.equal(solveSeriesCircuit(spec,{}, {sw1:false}).current,0);
-  assert.equal(solveSeriesCircuit({...spec,wires:spec.wires.slice(1)}, {}, {}).supported,false);
-  assert.equal(solveSeriesCircuit({...spec,simulationType:'transient'}, {}, {}).supported,false);
+  assert.equal(solveSeriesCircuit({...spec,wires:spec.wires.slice(1)}, {}, {}).current,0); // broken loop: no current
+  assert.equal(solveSeriesCircuit({...spec,simulationType:'ac'}, {}, {}).supported,false);
 });
 
 const { SimulationOutputError } = require('../src/services/ai/json-cleaner.ts');
@@ -196,7 +196,11 @@ test('function arity is checked at compile time', () => {
 test('vault rejects notes with bad timestamps or simulations', () => {
   const base = { ...DEFAULT_NOTES[0] };
   assert.throws(() => parseVault(JSON.stringify([{ ...base, createdAt: 'x' }])), /createdAt/);
-  assert.throws(() => parseVault(JSON.stringify([{ ...base, attachedSimulation: { domain: 'nope' } }])), /simulation/);
+  // One bad visualization must not lock the whole vault: the note loads unchanged and the problem is reported.
+  const { parseVaultWithWarnings } = require('../src/lib/vault.ts');
+  const loaded = parseVaultWithWarnings(JSON.stringify([{ ...base, attachedSimulation: { domain: 'nope' } }]));
+  assert.equal(loaded.notes[0].attachedSimulation.domain, 'nope');
+  assert.match(loaded.warnings[0], /unsupported domain/);
   assert.equal(parseVault(JSON.stringify(DEFAULT_NOTES)).length, DEFAULT_NOTES.length);
 });
 test('markdown notes round-trip with metadata and simulation', () => {
@@ -325,4 +329,36 @@ test('rejected domains are named with the allowed list, and the prompt routes ga
   assert.throws(() => assertSimulation({ domain: 'logic_gates', title: 't', params: [] }), /"logic_gates".*math, circuit, physics, chemistry, algorithm, logic, orbit, 3d, diagram/);
   assert.match(SYSTEM_PROMPT, /Set "domain" to exactly one of these names/);
   assert.match(SYSTEM_PROMPT, /use\s+logic \(not diagram\) for any gate circuit/);
+});
+test('nodal solver: dividers, parallel branches, steady state, shorts and floating nodes', () => {
+  const c = (id, type, value, extra = {}) => ({ id, type, value, unit: '', label: id, pos: { x: 0, y: 0 }, ...extra });
+  const w = (id, a, ap, b, bp) => ({ id, from: { compId: a, pin: ap }, to: { compId: b, pin: bp } });
+  // 10 V, 1 kΩ feeding two 2 kΩ in parallel: midpoint 5 V, 5 mA total, 2.5 mA per branch, 50 mW.
+  const div = { domain: 'circuit', title: 'd', simulationType: 'dc', params: [], components: [c('v', 'dc_source', 10), c('r1', 'resistor', 1000), c('r2', 'resistor', 2000), c('r3', 'resistor', 2000), c('g', 'ground', 0)],
+    wires: [w('a', 'v', 0, 'r1', 0), w('b', 'r1', 1, 'r2', 0), w('c', 'r1', 1, 'r3', 0), w('d', 'r2', 1, 'v', 1), w('e', 'r3', 1, 'v', 1), w('f', 'g', 0, 'v', 1)] };
+  const r = solveCircuit(div, {}, {});
+  const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-9, `${a} != ${b}`);
+  near(r.nodeVoltages[r.pinNode['r1:1']], 5); near(r.current, 0.005); near(r.components.r2.current, 0.0025); near(r.power, 0.05);
+  near(r.nodeVoltages[r.pinNode['g:0']], 0);
+  // Sliders override values by component id.
+  near(solveCircuit(div, { r1: 2000 }, {}).nodeVoltages[r.pinNode['r1:1']], 10 / 3);
+  // Demo loop: drops across R1 and R2 and their sum equals the source.
+  const ohm = DEFAULT_NOTES.find(n => n.id === 'demo-2-ohm').attachedSimulation, o = solveCircuit(ohm, {}, {});
+  near(o.components.r1.voltage, 9 * 220 / 550); near(o.components.r2.voltage, 9 * 330 / 550);
+  // Series RLC steady state: no current, capacitor holds the full source voltage.
+  const rlc = solveCircuit(DEFAULT_NOTES.find(n => n.id === 'note-circuit-1').attachedSimulation, {}, {});
+  assert.ok(rlc.supported); near(rlc.current, 0); near(Math.abs(rlc.components.c1.voltage), 12);
+  // A wire across the source is reported as a short instead of crashing.
+  assert.match(solveCircuit({ ...div, wires: [...div.wires, w('s', 'v', 0, 'v', 1)] }, {}, {}).reason, /Short circuit/);
+  // Unsupported parts are reported, not simulated.
+  assert.equal(solveCircuit({ ...div, components: [...div.components, c('d1', 'diode', 0)] }, {}, {}).supported, false);
+});
+test('engineering formatting', () => {
+  const ts = require('typescript'), fs = require('node:fs');
+  // formatSI lives in a .tsx file; transpile just that function's module text.
+  const src = fs.readFileSync(require.resolve('../src/components/visualizers/circuits/CircuitVisualizer.tsx'), 'utf8');
+  const fn = src.slice(src.indexOf('export function formatSI'));
+  const { formatSI } = (() => { const m = { exports: {} }; new Function('module', 'exports', ts.transpileModule(fn, { compilerOptions: { module: 1, target: 7 } }).outputText)(m, m.exports); return m.exports; })();
+  assert.equal(formatSI(0.016363, 'A'), '16.4 mA'); assert.equal(formatSI(5.4, 'V'), '5.40 V'); assert.equal(formatSI(0.147, 'W'), '147 mW');
+  assert.equal(formatSI(0, 'A'), '0 A'); assert.equal(formatSI(-12, 'V'), '-12.0 V'); assert.equal(formatSI(NaN, 'V'), '— V');
 });

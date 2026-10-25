@@ -111,7 +111,7 @@ $$V_s(t) = V_R(t) + V_L(t) + V_C(t) = R i(t) + L \\frac{di(t)}{dt} + \\frac{1}{C
 ### DC Steady State:
 When the switch closes, current rises and then decays to zero as the capacitor charges to $V_s$. A capacitor blocks steady DC, so the final current is $0$ and $V_C = V_s$.
 
-*The visualizer shows this loop as a schematic. Live measurements are only computed for DC loops of resistors and switches, so current and power read "Unavailable" here.*`,
+*The schematic shows this final DC steady state: every node sits at 12 V except the reference, the current is 0, and the full 12 V appears across the capacitor. The switch-on transient itself is not simulated.*`,
     attachedSimulation: {
       domain: 'circuit',
       title: 'Series RLC Loop',

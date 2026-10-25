@@ -273,13 +273,15 @@ export const AlgorithmVisualizer: React.FC<AlgorithmVisualizerProps> = ({ spec }
         {/* Speed Slider */}
         <div className="flex items-center gap-2">
           <span className="text-[10px] text-zinc-400 font-mono">Speed:</span>
+          {/* The slider shows speed (right = faster); the timer needs the delay, so invert within 100–1000 ms. */}
           <input
             type="range"
+            aria-label="Playback speed"
             min={100}
             max={1000}
             step={50}
-            value={speedMs}
-            onChange={(e) => setSpeedMs(parseInt(e.target.value))}
+            value={1100 - speedMs}
+            onChange={(e) => setSpeedMs(1100 - parseInt(e.target.value))}
             className="w-16 accent-purple-500 h-1 bg-zinc-800 rounded cursor-pointer"
           />
         </div>

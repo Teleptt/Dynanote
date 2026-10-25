@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { SimulationSpec, DomainType, AgenticTrace } from '../../types';
-const MathVisualizer = React.lazy(() => import('./math/MathVisualizer').then(m => ({ default: m.MathVisualizer })));
-const CircuitVisualizer = React.lazy(() => import('./circuits/CircuitVisualizer').then(m => ({ default: m.CircuitVisualizer })));
-const PhysicsVisualizer = React.lazy(() => import('./physics/PhysicsVisualizer').then(m => ({ default: m.PhysicsVisualizer })));
-const ChemVisualizer = React.lazy(() => import('./chemistry/ChemVisualizer').then(m => ({ default: m.ChemVisualizer })));
-const AlgorithmVisualizer = React.lazy(() => import('./algorithms/AlgorithmVisualizer').then(m => ({ default: m.AlgorithmVisualizer })));
-const LogicVisualizer = React.lazy(() => import('./logic/LogicVisualizer').then(m => ({ default: m.LogicVisualizer })));
-const OrbitVisualizer = React.lazy(() => import('./astronomy/OrbitVisualizer').then(m => ({ default: m.OrbitVisualizer })));
-const GenerativeCanvasVisualizer = React.lazy(() => import('./generative/GenerativeCanvasVisualizer').then(m => ({ default: m.GenerativeCanvasVisualizer })));
-const ThreeDVisualizer = React.lazy(() => import('./threed/ThreeDVisualizer').then(m => ({ default: m.ThreeDVisualizer })));
-const AnnotatedDiagramVisualizer = React.lazy(() => import('./diagrams/AnnotatedDiagramVisualizer').then(m => ({ default: m.AnnotatedDiagramVisualizer })));
+import { assertSimulation } from '../../lib/simulation-schema';
+import { lazyWithRetry } from './lazy';
+
+const MathVisualizer = lazyWithRetry(() => import('./math/MathVisualizer').then(m => ({ default: m.MathVisualizer })));
+const CircuitVisualizer = lazyWithRetry(() => import('./circuits/CircuitVisualizer').then(m => ({ default: m.CircuitVisualizer })));
+const PhysicsVisualizer = lazyWithRetry(() => import('./physics/PhysicsVisualizer').then(m => ({ default: m.PhysicsVisualizer })));
+const ChemVisualizer = lazyWithRetry(() => import('./chemistry/ChemVisualizer').then(m => ({ default: m.ChemVisualizer })));
+const AlgorithmVisualizer = lazyWithRetry(() => import('./algorithms/AlgorithmVisualizer').then(m => ({ default: m.AlgorithmVisualizer })));
+const LogicVisualizer = lazyWithRetry(() => import('./logic/LogicVisualizer').then(m => ({ default: m.LogicVisualizer })));
+const OrbitVisualizer = lazyWithRetry(() => import('./astronomy/OrbitVisualizer').then(m => ({ default: m.OrbitVisualizer })));
+const GenerativeCanvasVisualizer = lazyWithRetry(() => import('./generative/GenerativeCanvasVisualizer').then(m => ({ default: m.GenerativeCanvasVisualizer })));
+const ThreeDVisualizer = lazyWithRetry(() => import('./threed/ThreeDVisualizer').then(m => ({ default: m.ThreeDVisualizer })));
+const AnnotatedDiagramVisualizer = lazyWithRetry(() => import('./diagrams/AnnotatedDiagramVisualizer').then(m => ({ default: m.AnnotatedDiagramVisualizer })));
 import {
   Sliders,
   Code,
@@ -254,6 +257,7 @@ export const VisualWorkbench: React.FC<VisualWorkbenchProps> = ({
       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
         {activeTab === 'visual' && (
           <div className="flex-1 flex flex-col min-h-[360px]">
+            <SpecGuard spec={spec} />
             {spec.domain === 'math' && (
               <MathVisualizer spec={spec} paramValues={paramValues} onParamChange={handleParamChange} />
             )}
@@ -469,3 +473,9 @@ export const VisualWorkbench: React.FC<VisualWorkbenchProps> = ({
     </div>
   );
 };
+
+/** Throws inside the surrounding error boundary when a stored spec is invalid, so the reason is shown instead of a crash deeper down. */
+function SpecGuard({ spec }: { spec: unknown }) {
+  assertSimulation(spec);
+  return null;
+}

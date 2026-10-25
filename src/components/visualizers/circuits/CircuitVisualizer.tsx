@@ -1,6 +1,6 @@
 import { themedColor, contrastText } from '../../../theme/themes';
 import { useTheme } from '../../../theme/useTheme';
-import { solveSeriesCircuit } from '../../../lib/circuit';
+import { solveCircuit } from '../../../lib/circuit';
 import { circuitBounds, circuitWirePaths, pathFromPoints, viewBoxAttr } from '../../../lib/layout';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { CircuitSpec, CircuitComponent, CircuitWire } from '../../../types';
@@ -29,13 +29,31 @@ export const CircuitVisualizer: React.FC<CircuitVisualizerProps> = ({ spec, para
   const animRef = useRef<number | null>(null);
 
   useEffect(() => { setSwitchStates(Object.fromEntries(spec.components.filter(c => c.type === 'switch').map(c => [c.id, c.state !== false]))); }, [spec]);
-  const measurement = solveSeriesCircuit(spec, paramValues, switchStates);
-  const { current } = measurement;
-  const isCircuitActive = measurement.supported && current !== 0;
-  const currentMilliAmps = current * 1000;
+  const measurement = useMemo(() => solveCircuit(spec, paramValues, switchStates), [spec, paramValues, switchStates]);
+  const [showValues, setShowValues] = useState(true);
+  // A part carries current when its solved current is non-negligible.
+  const carries = (id: string) => Math.abs(measurement.components[id]?.current ?? 0) > 1e-9;
+  const maxCurrent = Math.max(0, ...Object.values(measurement.components).map((c) => Math.abs(c.current ?? 0)));
+  const current = maxCurrent;
+  const isCircuitActive = measurement.supported && maxCurrent > 1e-9;
   const bulbPowerWatts = measurement.power;
   const wirePaths = useMemo(() => circuitWirePaths(spec), [spec]);
   const bounds = useMemo(() => circuitBounds(spec), [spec]);
+  // One voltage tag per node, placed at the middle of the longest straight run of one of its wires.
+  const nodeTags = useMemo(() => {
+    const tags = new Map<string, { x: number; y: number; length: number }>();
+    wirePaths.forEach((w, i) => {
+      const wire = spec.wires[i];
+      const nodeId = measurement.pinNode[`${wire.from.compId}:${wire.from.pin}`];
+      if (!nodeId) return;
+      for (let k = 1; k < w.points.length; k++) {
+        const a = w.points[k - 1], b = w.points[k];
+        const length = Math.hypot(b.x - a.x, b.y - a.y);
+        if (length > (tags.get(nodeId)?.length ?? 0)) tags.set(nodeId, { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, length });
+      }
+    });
+    return [...tags.entries()];
+  }, [wirePaths, spec.wires, measurement.pinNode]);
 
   // Particle drift animation loop
   useEffect(() => {
@@ -227,16 +245,22 @@ export const CircuitVisualizer: React.FC<CircuitVisualizerProps> = ({ spec, para
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: isCircuitActive ? themedColor('#22c55e') : themedColor('#ef4444') }} />
             <span className="font-mono text-zinc-300">
-              State: <strong className={isCircuitActive ? 'text-green-400' : 'text-red-400'}>{!measurement.supported ? 'SCHEMATIC' : isCircuitActive ? 'CONDUCTING' : 'IDLE / OPEN'}</strong>
+              State: <strong className={isCircuitActive ? 'text-green-400' : 'text-red-400'}>{!measurement.supported ? 'SCHEMATIC' : isCircuitActive ? 'CONDUCTING' : 'NO CURRENT'}</strong>
             </span>
           </div>
           <div className="font-mono text-zinc-300">
-            Current: <span className="text-amber-400 font-bold">{measurement.supported ? `${currentMilliAmps.toFixed(1)} mA` : 'Unavailable'}</span>
+            Current: <span className="text-amber-400 font-bold">{measurement.supported ? (spec.components.filter((c) => c.type === 'dc_source').length === 1 ? formatSI(measurement.current, 'A') : 'see parts') : 'Unavailable'}</span>
           </div>
           <div className="font-mono text-zinc-300">
-            Power: <span className="text-purple-400 font-bold">{measurement.supported ? (bulbPowerWatts < 1 ? `${(bulbPowerWatts * 1000).toFixed(0)} mW` : `${bulbPowerWatts.toFixed(2)} W`) : 'Unavailable'}</span>
+            Power: <span className="text-purple-400 font-bold">{measurement.supported ? formatSI(bulbPowerWatts, 'W') : 'Unavailable'}</span>
           </div>
         </div>
+        {measurement.supported && (
+          <label className="flex items-center gap-1.5 text-[11px] font-mono text-zinc-400 whitespace-nowrap cursor-pointer">
+            <input type="checkbox" checked={showValues} onChange={(e) => setShowValues(e.target.checked)} className="accent-purple-500" />
+            Show voltages &amp; currents
+          </label>
+        )}
         <div className="text-zinc-500 text-[11px] font-mono whitespace-nowrap">
           Click the switch or drag sliders
         </div>
@@ -269,7 +293,7 @@ export const CircuitVisualizer: React.FC<CircuitVisualizerProps> = ({ spec, para
             {wirePaths.map((w) => (
               <path key={w.id} d={pathFromPoints(w.points)} stroke={themedColor('#3f3f46')} strokeWidth="4" />
             ))}
-            {isCircuitActive && wirePaths.map((w) => (
+            {isCircuitActive && wirePaths.filter((_, i) => carries(spec.wires[i].from.compId) || carries(spec.wires[i].to.compId)).map((w) => (
               <React.Fragment key={w.id}>
                 <path d={pathFromPoints(w.points)} stroke={themedColor('#fbbf24')} strokeWidth="2.5" filter="url(#wire-glow)" opacity="0.8" />
                 {/* Animated electron drift dots */}
@@ -280,8 +304,47 @@ export const CircuitVisualizer: React.FC<CircuitVisualizerProps> = ({ spec, para
 
           {/* Render All Circuit Components */}
           {spec.components.map(renderComponent)}
+
+          {/* Simulated values: node voltages on the wires, voltage drop and current beside each part */}
+          {measurement.supported && showValues && (
+            <g fontFamily="monospace" fontSize="10" pointerEvents="none">
+              {nodeTags.map(([nodeId, at]) => {
+                const v = measurement.nodeVoltages[nodeId];
+                if (v === null || v === undefined) return null;
+                const text = nodeId === measurement.referenceNode ? '0 V (ref)' : formatSI(v, 'V');
+                const width = text.length * 6.2 + 10;
+                return (
+                  <g key={nodeId}>
+                    <rect x={at.x - width / 2} y={at.y - 8} width={width} height={16} rx={8} fill={themedColor('#0c4a6e')} stroke={themedColor('#38bdf8')} strokeWidth="1" />
+                    <text x={at.x} y={at.y + 3.5} textAnchor="middle" fill={themedColor('#e0f2fe')}>{text}</text>
+                  </g>
+                );
+              })}
+              {spec.components.map((c) => {
+                const r = measurement.components[c.id];
+                if (!r || !['resistor', 'lamp', 'capacitor', 'inductor', 'dc_source'].includes(c.type)) return null;
+                const parts = [Number.isFinite(r.voltage) && c.type !== 'dc_source' ? `ΔV ${formatSI(Math.abs(r.voltage), 'V')}` : '', r.current !== null && c.type !== 'capacitor' ? `I ${formatSI(Math.abs(r.current), 'A')}` : ''].filter(Boolean);
+                if (!parts.length) return null;
+                const vertical = c.rotation === 90 || c.rotation === 270;
+                const x = c.pos.x + (c.type === 'dc_source' && vertical ? -24 : vertical ? 20 : 0);
+                const y = c.pos.y + (vertical ? 18 : 26);
+                return <text key={c.id} x={x} y={y} textAnchor={c.type === 'dc_source' && vertical ? 'end' : vertical ? 'start' : 'middle'} fill={themedColor('#fde68a')}>{parts.join(' · ')}</text>;
+              })}
+            </g>
+          )}
         </svg>
       </div>
     </div>
   );
 };
+
+/** Engineering notation: 0.0164 A -> "16.4 mA", 5.4 V -> "5.40 V". */
+export function formatSI(value: number, unit: string): string {
+  if (!Number.isFinite(value)) return `— ${unit}`;
+  const abs = Math.abs(value);
+  if (abs < 1e-12) return `0 ${unit}`;
+  const prefixes: Array<[number, string]> = [[1e6, 'M'], [1e3, 'k'], [1, ''], [1e-3, 'm'], [1e-6, 'µ'], [1e-9, 'n']];
+  const [scale, prefix] = prefixes.find(([f]) => abs >= f) ?? prefixes[prefixes.length - 1];
+  const scaled = value / scale;
+  return `${Math.abs(scaled) >= 100 ? scaled.toFixed(0) : Math.abs(scaled) >= 10 ? scaled.toFixed(1) : scaled.toFixed(2)} ${prefix}${unit}`;
+}

@@ -101,6 +101,8 @@ export function circuitWirePaths(spec: CircuitSpec): { id: string; points: Point
 export function circuitBounds(spec: CircuitSpec): Box {
   // Labels extend up to ~70px beside a symbol (e.g. "12V DC", "OPEN (Click to Close)").
   const items: Array<Point & { r?: number }> = spec.components.map(c => ({ ...c.pos, r: c.type === 'dc_source' || c.type === 'switch' ? 72 : 48 }));
+  // Simulated-value readouts sit to the right of vertical parts and to the left of vertical sources.
+  for (const c of spec.components) if (c.rotation === 90 || c.rotation === 270) items.push({ x: c.pos.x + (c.type === 'dc_source' ? -130 : 130), y: c.pos.y });
   for (const w of circuitWirePaths(spec)) items.push(...w.points);
   return fitViewBox(items, 16, { width: 320, height: 200 });
 }

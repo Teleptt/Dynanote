@@ -1,16 +1,17 @@
 import { assertSimulation } from '../../lib/simulation-schema';
 import React, { useState, useEffect, useMemo } from 'react';
 import { SimulationSpec, DomainType } from '../../types';
-const MathVisualizer = React.lazy(() => import('../visualizers/math/MathVisualizer').then(m => ({ default: m.MathVisualizer })));
-const CircuitVisualizer = React.lazy(() => import('../visualizers/circuits/CircuitVisualizer').then(m => ({ default: m.CircuitVisualizer })));
-const PhysicsVisualizer = React.lazy(() => import('../visualizers/physics/PhysicsVisualizer').then(m => ({ default: m.PhysicsVisualizer })));
-const ChemVisualizer = React.lazy(() => import('../visualizers/chemistry/ChemVisualizer').then(m => ({ default: m.ChemVisualizer })));
-const AlgorithmVisualizer = React.lazy(() => import('../visualizers/algorithms/AlgorithmVisualizer').then(m => ({ default: m.AlgorithmVisualizer })));
-const LogicVisualizer = React.lazy(() => import('../visualizers/logic/LogicVisualizer').then(m => ({ default: m.LogicVisualizer })));
-const OrbitVisualizer = React.lazy(() => import('../visualizers/astronomy/OrbitVisualizer').then(m => ({ default: m.OrbitVisualizer })));
-const GenerativeCanvasVisualizer = React.lazy(() => import('../visualizers/generative/GenerativeCanvasVisualizer').then(m => ({ default: m.GenerativeCanvasVisualizer })));
-const ThreeDVisualizer = React.lazy(() => import('../visualizers/threed/ThreeDVisualizer').then(m => ({ default: m.ThreeDVisualizer })));
-const AnnotatedDiagramVisualizer = React.lazy(() => import('../visualizers/diagrams/AnnotatedDiagramVisualizer').then(m => ({ default: m.AnnotatedDiagramVisualizer })));
+import { lazyWithRetry } from '../visualizers/lazy';
+const MathVisualizer = lazyWithRetry(() => import('../visualizers/math/MathVisualizer').then(m => ({ default: m.MathVisualizer })));
+const CircuitVisualizer = lazyWithRetry(() => import('../visualizers/circuits/CircuitVisualizer').then(m => ({ default: m.CircuitVisualizer })));
+const PhysicsVisualizer = lazyWithRetry(() => import('../visualizers/physics/PhysicsVisualizer').then(m => ({ default: m.PhysicsVisualizer })));
+const ChemVisualizer = lazyWithRetry(() => import('../visualizers/chemistry/ChemVisualizer').then(m => ({ default: m.ChemVisualizer })));
+const AlgorithmVisualizer = lazyWithRetry(() => import('../visualizers/algorithms/AlgorithmVisualizer').then(m => ({ default: m.AlgorithmVisualizer })));
+const LogicVisualizer = lazyWithRetry(() => import('../visualizers/logic/LogicVisualizer').then(m => ({ default: m.LogicVisualizer })));
+const OrbitVisualizer = lazyWithRetry(() => import('../visualizers/astronomy/OrbitVisualizer').then(m => ({ default: m.OrbitVisualizer })));
+const GenerativeCanvasVisualizer = lazyWithRetry(() => import('../visualizers/generative/GenerativeCanvasVisualizer').then(m => ({ default: m.GenerativeCanvasVisualizer })));
+const ThreeDVisualizer = lazyWithRetry(() => import('../visualizers/threed/ThreeDVisualizer').then(m => ({ default: m.ThreeDVisualizer })));
+const AnnotatedDiagramVisualizer = lazyWithRetry(() => import('../visualizers/diagrams/AnnotatedDiagramVisualizer').then(m => ({ default: m.AnnotatedDiagramVisualizer })));
 import {
   ExternalLink,
   Sliders,

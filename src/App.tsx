@@ -1,7 +1,7 @@
 import { THEMES, ThemeId } from './theme/themes';
 import { useTheme } from './theme/useTheme';
 import { SimulationBoundary } from './components/visualizers/SimulationBoundary';
-import { parseVault, attachResult } from './lib/vault';
+import { parseVault, parseVaultWithWarnings, attachResult } from './lib/vault';
 import { noteToMarkdown, markdownToNote, markdownFileName } from './lib/markdown-note';
 import React, { useState, useEffect, useRef } from 'react';
 import { Note, SimulationSpec, GenerationStatusEvent, AgenticTrace } from './types';
@@ -138,12 +138,14 @@ export const App: React.FC = () => {
   };
   const importVault = async (file: File) => {
     try {
-      const imported = parseVault(await file.text());
+      const { notes: imported, warnings } = parseVaultWithWarnings(await file.text());
       // Merge as new notes so imports never overwrite existing work.
       const added = imported.map(n => ({ ...n, id: crypto.randomUUID() }));
       setNotes(prev => [...prev, ...added]); setLoadFailed(false);
       if (added.length) { setActiveNoteId(added[0].id); setOpenTabIds(prev => [...prev, added[0].id]); }
-      setToastMessage({ text: `Imported ${added.length} notes. Existing notes were preserved.`, type: 'success' });
+      setToastMessage(warnings.length
+        ? { text: `Imported ${added.length} notes. ${warnings.length} visualization(s) need fixing and will show the reason when opened.`, type: 'info' }
+        : { text: `Imported ${added.length} notes. Existing notes were preserved.`, type: 'success' });
     } catch (error) { setToastMessage({ text: errorText(error), type: 'error' }); }
   };
 

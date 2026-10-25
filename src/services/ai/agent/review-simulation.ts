@@ -1,7 +1,7 @@
 import { SimulationSpec, DomainValidationReport } from '../../../types';
 import { assertSimulation } from '../../../lib/simulation-schema';
 import { compileExpression } from '../../../lib/expression';
-import { solveSeriesCircuit } from '../../../lib/circuit';
+import { solveCircuit } from '../../../lib/circuit';
 import { truthTableMismatches } from '../../../lib/logic';
 
 /** Read-only tool feedback. Never replace the user's scientific model with defaults. */
@@ -45,7 +45,7 @@ export function reviewSimulation(spec: SimulationSpec): DomainValidationReport {
       break;
     }
     case 'circuit': {
-      const model = solveSeriesCircuit(spec, params, {});
+      const model = solveCircuit(spec, params, {});
       if (!model.supported) report.warnings.push(model.reason);
       break;
     }

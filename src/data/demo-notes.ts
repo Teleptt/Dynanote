@@ -30,7 +30,7 @@ export const DEMO_NOTES: Note[] = [
 
 ### Honest limits (say these out loud)
 - Equations run in a safe arithmetic-only parser, never as JavaScript.
-- Circuit measurements cover single DC loops of resistors and switches. Anything else is drawn as a schematic.
+- Circuits are solved for their DC operating point (node voltages and currents). AC sources, diodes and transients are drawn but not simulated.
 - Automated checks catch broken models; they are not scientific certification.`
   }, 0),
   note({
@@ -82,7 +82,7 @@ With $V = 9$ V, $R_1 = 220\\,\\Omega$ and $R_2 = 330\\,\\Omega$:
 - Voltage divides in proportion to resistance: $V_1 \\approx 3.6$ V and $V_2 \\approx 5.4$ V
 - Total power $P \\approx 0.147$ W
 
-This loop is fully solved by the app, so the current and power readouts are live.
+The app solves the circuit, so every node voltage and part current on the schematic is live.
 
 *Try: double $R_2$ and predict the new current before you look.*`,
     attachedSimulation: {

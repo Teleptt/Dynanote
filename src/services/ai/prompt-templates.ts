@@ -41,9 +41,9 @@ such as "logic_gates" or "circuits"): math, circuit, physics, chemistry, algorit
    wires:[{id,from:{compId,pin},to:{compId,pin},points?:[{x,y}]}], simulationType:dc|ac|transient.
    Pins: every two-terminal part (sources included) is horizontal at rotation 0 (pin 0 left, pin 1 right) and vertical at rotation 90 (pin 0 top). dc_source pin 0 is +. Wires are routed automatically from pins, so omit points.
    Types: resistor,capacitor,inductor,dc_source,ac_source,ground,switch,diode,lamp,ammeter,voltmeter.
-   Pins are 0 or 1. Quantitative measurements support one DC source, positive resistors, and
-   switches in one series loop. Other topologies may be shown as schematics; do not claim their
-   currents or transients are simulated. Typical viewBox 580 by 340; place components accordingly.
+   Pins are 0 or 1. The app solves the DC operating point of any topology (resistors, DC sources,
+   switches, ground; inductors as shorts, capacitors as open) and shows node voltages and part currents.
+   AC sources, diodes, and transients are not simulated; do not claim they are. Typical viewBox 580 by 340; place components accordingly.
 3. physics: gravity:{x,y}, bodies:[{id,type,pos:{x,y},velocity?:{x,y},mass,
    dimensions:{width?,height?,radius?,length?,angle?},color,isStatic?}],
    constraints:[{id,type,bodyA,bodyB?,anchorA?:{x,y},anchorB?:{x,y},stiffness?,restLength?,damping?}],
