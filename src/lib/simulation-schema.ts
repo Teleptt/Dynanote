@@ -4,7 +4,9 @@ const domains = ['math','circuit','physics','chemistry','algorithm','logic','orb
 export function assertSimulation(value: unknown): asserts value is SimulationSpec {
   const s = value as any;
   const fail = (message: string): never => { throw new Error('Invalid simulation: ' + message); };
-  if (!s || typeof s !== 'object' || !domains.includes(s.domain)) fail('unsupported domain');
+  if (!s || typeof s !== 'object') fail('spec must be an object');
+  // Name the rejected value and the allowed ones so a model revision can correct it directly.
+  if (!domains.includes(s.domain)) fail(`unsupported domain ${JSON.stringify(s.domain)}; "domain" must be exactly one of ${domains.filter(d => d !== 'generative').join(', ')}`);
   if (typeof s.title !== 'string') fail('title must be text');
   const array = (v: any, label: string) => { if (!Array.isArray(v) || v.length > 10000 || v.some(x => !x || typeof x !== 'object')) fail(label + ' must be an array of objects'); };
   const number = (v: any, label: string) => { if (!Number.isFinite(v)) fail(label + ' must be finite'); };

@@ -320,3 +320,9 @@ test('circuit wires ignore model bends that would draw diagonals', () => {
   assert.ok(!w0.points.some(p => p.x === 90 && p.y === 70));
   assert.ok(w1.points.some(p => p.x === 220 && p.y === 90));
 });
+test('rejected domains are named with the allowed list, and the prompt routes gate circuits to logic', () => {
+  const { SYSTEM_PROMPT } = require('../src/services/ai/prompt-templates.ts');
+  assert.throws(() => assertSimulation({ domain: 'logic_gates', title: 't', params: [] }), /"logic_gates".*math, circuit, physics, chemistry, algorithm, logic, orbit, 3d, diagram/);
+  assert.match(SYSTEM_PROMPT, /Set "domain" to exactly one of these names/);
+  assert.match(SYSTEM_PROMPT, /use\s+logic \(not diagram\) for any gate circuit/);
+});

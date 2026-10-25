@@ -32,7 +32,8 @@ Equations allow numeric variables, + - * / % ^, parentheses, pi/e/PI/E, and
 sin cos tan asin acos atan atan2 exp sqrt abs log ln log10 pow min max floor ceil round hypot.
 No property access or JavaScript. Bind parameters by their IDs.
 
-Available representations:
+Available representations. Set "domain" to exactly one of these names (lowercase, no variants
+such as "logic_gates" or "circuits"): math, circuit, physics, chemistry, algorithm, logic, orbit, 3d, diagram.
 1. math: bounds:{xMin,xMax,yMin,yMax}, functions:[{id,expression,color,label?}].
    Expressions use x and parameter IDs. Optional calculus:{showTangent,tangentX,
    showIntegral,integralA,integralB,integralPartitions}; partitions 1–1000.
@@ -61,6 +62,8 @@ Available representations:
 6. logic: inputs:[{id,label,pos:{x,y},initialValue:0|1}], gates:[{id,type,pos:{x,y}}],
    outputs:[{id,label,pos:{x,y},fromGateId?,fromInputId?}], wires:[{id,fromId,toId,inputIndex?}].
    Gates:AND,OR,NOT,XOR,NAND,NOR,XNOR,BUFFER. Use combinational acyclic circuits.
+   The renderer shows clickable inputs and a live truth table computed from the wiring, so use
+   logic (not diagram) for any gate circuit, including requests for a truth table; truthTable is optional.
 7. orbit: centralBody:{name,mass,radius,color}, bodies:[{id,name,mass,radius,semiMajorAxis,
    eccentricity,orbitalPeriod,color,showTrail?,showVectors?}], timeScale?,
    keplerSweep?:{enabled,sectorAngleSpan?}. Bound elliptical orbits require 0<=eccentricity<1
