@@ -38,6 +38,7 @@ Available representations:
    showIntegral,integralA,integralB,integralPartitions}; partitions 1–1000.
 2. circuit: components:[{id,type,value,unit,label,pos:{x,y},rotation?,state?:boolean (switches: true=closed)}],
    wires:[{id,from:{compId,pin},to:{compId,pin},points?:[{x,y}]}], simulationType:dc|ac|transient.
+   Pins: every two-terminal part (sources included) is horizontal at rotation 0 (pin 0 left, pin 1 right) and vertical at rotation 90 (pin 0 top). dc_source pin 0 is +. Wires are routed automatically from pins, so omit points.
    Types: resistor,capacitor,inductor,dc_source,ac_source,ground,switch,diode,lamp,ammeter,voltmeter.
    Pins are 0 or 1. Quantitative measurements support one DC source, positive resistors, and
    switches in one series loop. Other topologies may be shown as schematics; do not claim their

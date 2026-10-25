@@ -94,9 +94,9 @@ export class MockOfflineProvider implements IAIProvider {
           description: 'One DC source, resistor, and switch. Current follows I = V/R.',
           simulationType: 'dc',
           components: [
-            { id: 'v1', type: 'dc_source', value: 12, unit: 'V', label: '12V DC', pos: { x: 100, y: 190 } },
+            { id: 'v1', type: 'dc_source', value: 12, unit: 'V', label: '12V DC', pos: { x: 100, y: 190 }, rotation: 90 },
             { id: 'sw1', type: 'switch', value: 1, unit: '', label: 'Switch', pos: { x: 220, y: 90 }, state: true },
-            { id: 'r1', type: 'resistor', value: 50, unit: 'Ω', label: 'Resistor', pos: { x: 400, y: 190 } }
+            { id: 'r1', type: 'resistor', value: 50, unit: 'Ω', label: 'Resistor', pos: { x: 400, y: 190 }, rotation: 90 }
           ],
           wires: [
             { id: 'w1', from: { compId: 'v1', pin: 0 }, to: { compId: 'sw1', pin: 0 } },

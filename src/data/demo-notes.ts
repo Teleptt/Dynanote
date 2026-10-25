@@ -91,16 +91,16 @@ This loop is fully solved by the app, so the current and power readouts are live
       description: 'A 9 V source, a switch, and two resistors in one closed loop.',
       simulationType: 'dc',
       components: [
-        { id: 'v1', type: 'dc_source', value: 9, unit: 'V', label: '9 V', pos: { x: 100, y: 190 }, rotation: 0 },
+        { id: 'v1', type: 'dc_source', value: 9, unit: 'V', label: '9 V', pos: { x: 100, y: 190 }, rotation: 90 },
         { id: 'sw1', type: 'switch', value: 1, unit: '', label: 'Switch', pos: { x: 200, y: 90 }, rotation: 0, state: true },
         { id: 'r1', type: 'resistor', value: 220, unit: 'Ω', label: 'R1 220 Ω', pos: { x: 340, y: 90 }, rotation: 0 },
         { id: 'r2', type: 'resistor', value: 330, unit: 'Ω', label: 'R2 330 Ω', pos: { x: 440, y: 190 }, rotation: 90 }
       ],
       wires: [
-        { id: 'w1', from: { compId: 'v1', pin: 1 }, to: { compId: 'sw1', pin: 0 } },
+        { id: 'w1', from: { compId: 'v1', pin: 0 }, to: { compId: 'sw1', pin: 0 } },
         { id: 'w2', from: { compId: 'sw1', pin: 1 }, to: { compId: 'r1', pin: 0 } },
         { id: 'w3', from: { compId: 'r1', pin: 1 }, to: { compId: 'r2', pin: 0 } },
-        { id: 'w4', from: { compId: 'r2', pin: 1 }, to: { compId: 'v1', pin: 0 } }
+        { id: 'w4', from: { compId: 'r2', pin: 1 }, to: { compId: 'v1', pin: 1 } }
       ],
       params: [
         { id: 'v1', label: 'Source voltage', min: 1, max: 24, default: 9, step: 0.5, unit: 'V' },

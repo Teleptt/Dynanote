@@ -118,7 +118,7 @@ When the switch closes, current rises and then decays to zero as the capacitor c
       description: 'A 12 V DC source, switch, 50 Ω resistor, 50 mH inductor, and 200 µF capacitor in one series loop.',
       simulationType: 'transient',
       components: [
-        { id: 'v1', type: 'dc_source', value: 12, unit: 'V', label: '12V DC', pos: { x: 100, y: 190 }, rotation: 0 },
+        { id: 'v1', type: 'dc_source', value: 12, unit: 'V', label: '12V DC', pos: { x: 100, y: 190 }, rotation: 90 },
         { id: 'sw1', type: 'switch', value: 1, unit: '', label: 'Power Switch', pos: { x: 190, y: 90 }, rotation: 0, state: true },
         { id: 'r1', type: 'resistor', value: 50, unit: 'Ω', label: '50 Ω', pos: { x: 300, y: 90 }, rotation: 0 },
         { id: 'l1', type: 'inductor', value: 0.05, unit: 'H', label: '50 mH', pos: { x: 420, y: 90 }, rotation: 0 },

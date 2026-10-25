@@ -283,3 +283,40 @@ test('circuit switch state must be boolean', () => {
   spec.components[1].state = false;
   assert.equal(solveSeriesCircuit(spec, {}, {}).current, 0);
 });
+test('layout: trees, circuit wires and frames stay consistent', () => {
+  const { layoutTree, fitViewBox, circuitWirePaths, circuitBounds, pinGeometry } = require('../src/lib/layout.ts');
+  // Balanced tree from links only; children sit below and on the correct side of their parent; no shared positions.
+  const nodes = [{ id: 'r', value: 34, left: 'a', right: 'b', x: 999, y: -500 }, { id: 'a', value: 15, left: 'c' }, { id: 'b', value: 63, right: 'd' }, { id: 'c', value: 3 }, { id: 'd', value: 88 }];
+  const pos = layoutTree(nodes);
+  assert.ok(pos.a.x < pos.r.x && pos.b.x > pos.r.x && pos.a.y > pos.r.y && pos.c.y > pos.a.y);
+  assert.equal(new Set(Object.values(pos).map(p => `${p.x},${p.y}`)).size, nodes.length);
+  assert.deepEqual(Object.keys(layoutTree([{ id: 'x', value: 1, left: 'x' }])), ['x']); // cycles terminate
+  // Frame contains everything.
+  const box = fitViewBox(Object.values(pos).map(p => ({ ...p, r: 20 })), 8);
+  for (const p of Object.values(pos)) assert.ok(p.x - 20 >= box.x && p.x + 20 <= box.x + box.width && p.y - 20 >= box.y && p.y + 20 <= box.y + box.height);
+  // Every wire starts and ends exactly on a pin, uses only right angles, and lies inside the frame.
+  for (const n of DEFAULT_NOTES.filter(n => n.attachedSimulation?.domain === 'circuit')) {
+    const spec = n.attachedSimulation, b = circuitBounds(spec), byId = new Map(spec.components.map(c => [c.id, c]));
+    for (const [w, path] of spec.wires.map((w, i) => [w, circuitWirePaths(spec)[i]])) {
+      assert.deepEqual(path.points[0], pinGeometry(byId.get(w.from.compId), w.from.pin).at, n.title);
+      assert.deepEqual(path.points.at(-1), pinGeometry(byId.get(w.to.compId), w.to.pin).at, n.title);
+      path.points.forEach((p, i) => {
+        assert.ok(p.x >= b.x && p.x <= b.x + b.width && p.y >= b.y && p.y <= b.y + b.height, `${n.title} ${w.id} out of frame`);
+        if (i) assert.ok(p.x === path.points[i - 1].x || p.y === path.points[i - 1].y, `${n.title} ${w.id} diagonal`);
+      });
+    }
+  }
+  // Rotation moves pins: a resistor at 90° has its pins above and below.
+  const r = { id: 'r', type: 'resistor', value: 1, unit: '', label: '', pos: { x: 0, y: 0 }, rotation: 90 };
+  assert.deepEqual([pinGeometry(r, 0).at, pinGeometry(r, 1).at], [{ x: 0, y: -35 }, { x: 0, y: 35 }]);
+});
+test('circuit wires ignore model bends that would draw diagonals', () => {
+  const { circuitWirePaths } = require('../src/lib/layout.ts');
+  const spec = structuredClone(DEFAULT_NOTES.find(n => n.id === 'demo-2-ohm').attachedSimulation);
+  spec.wires[0].points = [{ x: 90, y: 70 }]; // does not line up with either pin
+  spec.wires[1].points = [{ x: 220, y: 90 }]; // on the straight line between pins: kept
+  const [w0, w1] = circuitWirePaths(spec);
+  w0.points.forEach((p, i) => i && assert.ok(p.x === w0.points[i - 1].x || p.y === w0.points[i - 1].y));
+  assert.ok(!w0.points.some(p => p.x === 90 && p.y === 70));
+  assert.ok(w1.points.some(p => p.x === 220 && p.y === 90));
+});

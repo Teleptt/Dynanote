@@ -1,6 +1,7 @@
+import { layoutTree, fitViewBox, viewBoxAttr } from '../../../lib/layout';
 import { themedColor, contrastText } from '../../../theme/themes';
 import { useTheme } from '../../../theme/useTheme';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { AlgorithmSpec } from '../../../types';
 import { Play, Pause, SkipForward, RotateCcw, Activity } from 'lucide-react';
 
@@ -18,6 +19,10 @@ export const AlgorithmVisualizer: React.FC<AlgorithmVisualizerProps> = ({ spec }
   const timerRef = useRef<any>(null);
 
   const steps = spec.steps || [];
+  // Layouts are computed from structure and fitted to the frame, so nodes never leave it.
+  const treePos = useMemo(() => layoutTree(spec.treeNodes || []), [spec.treeNodes]);
+  const treeBox = useMemo(() => fitViewBox(Object.values(treePos).map((p) => ({ ...p, r: 20 })), 8, { width: 160, height: 100 }), [treePos]);
+  const graphBox = useMemo(() => fitViewBox((spec.graphNodes || []).map((n) => ({ x: n.x, y: n.y, r: 18 })), 8, { width: 160, height: 100 }), [spec.graphNodes]);
   const currentStep = steps[currentStepIndex] || {
     stepIndex: 0,
     description: spec.description || 'Initial State',
@@ -119,21 +124,17 @@ export const AlgorithmVisualizer: React.FC<AlgorithmVisualizerProps> = ({ spec }
       ) : spec.algorithmType === 'tree' ? (
         /* Binary Tree Display */
         <div className="w-full h-64 relative flex items-center justify-center p-4">
-          <svg className="w-full h-full" viewBox="0 0 500 220">
+          <svg className="w-full h-full" viewBox={viewBoxAttr(treeBox)} preserveAspectRatio="xMidYMid meet">
+            {(spec.treeNodes || []).flatMap((node) => [node.left, node.right].filter((c): c is string => !!c && !!treePos[c]).map((child) => (
+              <line key={`${node.id}-${child}`} x1={treePos[node.id].x} y1={treePos[node.id].y} x2={treePos[child].x} y2={treePos[child].y} stroke={themedColor('#4b5563')} strokeWidth="2" />
+            )))}
             {spec.treeNodes?.map((node) => {
-              const nx = node.x ?? 250;
-              const ny = node.y ?? 50;
+              const { x: nx, y: ny } = treePos[node.id];
               const isVisited = currentStep.visitedNodeIds?.includes(node.id);
               const isActive = currentStep.activeNodeId === node.id;
 
               return (
                 <g key={node.id}>
-                  {node.left && (
-                    <line x1={nx} y1={ny} x2={nx - 60} y2={ny + 50} stroke={themedColor('#4b5563')} strokeWidth="2" />
-                  )}
-                  {node.right && (
-                    <line x1={nx} y1={ny} x2={nx + 60} y2={ny + 50} stroke={themedColor('#4b5563')} strokeWidth="2" />
-                  )}
                   <circle
                     cx={nx}
                     cy={ny}
@@ -147,11 +148,12 @@ export const AlgorithmVisualizer: React.FC<AlgorithmVisualizerProps> = ({ spec }
                     }`}
                     strokeWidth="2"
                   />
+                  {/* Node fills are fixed dark tones, so the value is always white. */}
                   <text
                     x={nx}
                     y={ny + 4}
                     textAnchor="middle"
-                    fill={themedColor('#ffffff')}
+                    fill="#ffffff"
                     fontSize="11"
                     fontFamily="monospace"
                     fontWeight="bold"
@@ -166,7 +168,7 @@ export const AlgorithmVisualizer: React.FC<AlgorithmVisualizerProps> = ({ spec }
       ) : (
         /* Graph Display */
         <div className="w-full h-64 relative flex items-center justify-center p-4">
-          <svg className="w-full h-full" viewBox="0 0 500 220">
+          <svg className="w-full h-full" viewBox={viewBoxAttr(graphBox)} preserveAspectRatio="xMidYMid meet">
             {spec.graphEdges?.map((edge, eIdx) => {
               const fromN = spec.graphNodes?.find((n) => n.id === edge.from);
               const toN = spec.graphNodes?.find((n) => n.id === edge.to);
@@ -206,7 +208,7 @@ export const AlgorithmVisualizer: React.FC<AlgorithmVisualizerProps> = ({ spec }
                     x={node.x}
                     y={node.y + 4}
                     textAnchor="middle"
-                    fill={themedColor('#f3f4f6')}
+                    fill="#ffffff"
                     fontSize="10"
                     fontFamily="monospace"
                     fontWeight="bold"
